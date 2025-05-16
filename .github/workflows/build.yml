@@ -64,3 +64,4 @@ jobs:
         with:
           name: release-mappings
           path: "./service/build/outputs/mapping/release"
+          

@@ -8,6 +8,7 @@ plugins {
 }
 
 val sdkDir: String by rootProject.extra
+val zygDir: File by rootProject.extra
 val moduleId: String by rootProject.extra
 val moduleName: String by rootProject.extra
 val verCode: Int by rootProject.extra
@@ -123,6 +124,46 @@ androidComponents.onVariants { variant ->
             destinationDirectory.set(layout.projectDirectory.file("release").asFile)
             from(moduleDir)
         }
+
+        zipTask.doLast {
+            val updatesDir = zygDir
+            updatesDir.mkdirs()
+
+            val jsonFile = File(updatesDir, "nohello.json")
+            val changelogFile = File(updatesDir, "nohello_changelog.md")
+
+            // Update JSON
+            val jsonContent = """
+            {
+                "versionCode": $verCode,
+                "version": "$verName",
+                "zipUrl": "https://github.com/MhmRdd/nohello/releases/download/$verName/$zipFileName",
+                "changelog": "https://mhmrdd.github.io/01000004/zygisk/nohello_changelog.md"
+            }
+            """.trimIndent()
+            jsonFile.writeText(jsonContent)
+
+            // Get latest Git commit message
+            val commitMessage = ProcessBuilder("git", "log", "-1", "--pretty=%B")
+                .directory(rootProject.projectDir)
+                .redirectErrorStream(true)
+                .start()
+                .inputStream
+                .bufferedReader()
+                .readText()
+                .trim()
+
+            val newLogEntry = """
+                |### $verName ($verCode)
+                |
+                |- Commit: `$commitHash`
+                |- ABI(s): ${abiList.joinToString(", ")}
+                |
+                |$commitMessage
+            """.trimMargin()
+            changelogFile.writeText(newLogEntry)
+        }
+
 
         val pushTask = task<Exec>("push$variantCapped") {
             group = "module"
